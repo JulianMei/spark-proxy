@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package spark.proxy.v1;
+
+option go_package = "github.com/JulianMei/spark-proxy/gen/go/sparkproxyv1";
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+// SparkApplicationType defines the language/type of the Spark application
+enum SparkApplicationType {
+  SPARK_APPLICATION_TYPE_UNSPECIFIED = 0;
+  SPARK_APPLICATION_TYPE_JAVA = 1;
+  SPARK_APPLICATION_TYPE_SCALA = 2;
+  SPARK_APPLICATION_TYPE_PYTHON = 3;
+  SPARK_APPLICATION_TYPE_R = 4;
+}
+
+// DeployMode defines the deployment mode
+enum DeployMode {
+  DEPLOY_MODE_UNSPECIFIED = 0;
+  DEPLOY_MODE_CLUSTER = 1;
+  DEPLOY_MODE_CLIENT = 2;
+}
+
+// SparkApplicationState represents the current state of the application
+enum SparkApplicationState {
+  SPARK_APPLICATION_STATE_UNSPECIFIED = 0;
+  SPARK_APPLICATION_STATE_PENDING = 1;
+  SPARK_APPLICATION_STATE_RUNNING = 2;
+  SPARK_APPLICATION_STATE_COMPLETED = 3;
+  SPARK_APPLICATION_STATE_FAILED = 4;
+}
+
+// ============================================================================
+// Domain Models
+// ============================================================================
+
+// ResourceSpec defines CPU and memory resources
+message ResourceSpec {
+  int32 cores = 1;              // Number of CPU cores
+  string core_limit = 2;        // CPU core limit (e.g., "2000m")
+  string memory = 3;            // Memory request (e.g., "1Gi", "512Mi")
+  string memory_overhead = 4;   // Off-heap memory (e.g., "384Mi")
+}
+
+// DriverSpec defines driver pod configuration
+message DriverSpec {
+  ResourceSpec resources = 1;
+  string service_account = 2;
+  map<string, string> labels = 3;
+  map<string, string> annotations = 4;
+}
+
+// ExecutorSpec defines executor pod configuration
+message ExecutorSpec {
+  int32 instances = 1;          // Number of executor instances
+  ResourceSpec resources = 2;
+  map<string, string> labels = 3;
+  map<string, string> annotations = 4;
+}
+
+// Dependencies defines application dependencies
+message Dependencies {
+  repeated string jars = 1;       // JAR file paths
+  repeated string py_files = 2;   // Python file paths
+  repeated string files = 3;      // Generic file paths
+  repeated string packages = 4;   // Maven coordinates (groupId:artifactId:version)
+}
+
+// SparkApplication represents a Spark application
+message SparkApplication {
+  string id = 1;
+  string name = 2;
+  string namespace = 3;
+  SparkApplicationType type = 4;
+  DeployMode mode = 5;
+  string image = 6;
+  string main_application_file = 7;   // Path to JAR, Python, or R file
+  string main_class = 8;              // For Java/Scala apps
+  repeated string arguments = 9;
+  DriverSpec driver = 10;
+  ExecutorSpec executor = 11;
+  Dependencies deps = 12;
+  map<string, string> spark_conf = 13;
+  SparkApplicationState state = 14;
+  string spark_version = 15;
+}
+
+// ============================================================================
+// Request/Response Messages
+// ============================================================================
+
+// CreateSparkApplicationRequest
+message CreateSparkApplicationRequest {
+  string name = 1;
+  string namespace = 2;
+  SparkApplicationType type = 3;
+  DeployMode mode = 4;
+  string image = 5;
+  string main_application_file = 6;
+  string main_class = 7;
+  repeated string arguments = 8;
+  DriverSpec driver = 9;
+  ExecutorSpec executor = 10;
+  Dependencies deps = 11;
+  map<string, string> spark_conf = 12;
+  string spark_version = 13;
+}
+
+// GetSparkApplicationRequest
+message GetSparkApplicationRequest {
+  string namespace = 1;
+  string name = 2;
+}
+
+// ListSparkApplicationsRequest
+message ListSparkApplicationsRequest {
+  string namespace = 1;
+}
+
+// ListSparkApplicationsResponse
+message ListSparkApplicationsResponse {
+  repeated SparkApplication applications = 1;
+}
+
+// DeleteSparkApplicationRequest
+message DeleteSparkApplicationRequest {
+  string namespace = 1;
+  string name = 2;
+}
+
+// Empty response
+message Empty {}
+
+// ============================================================================
+// Service
+// ============================================================================
+
+// SparkApplicationService manages Spark applications
+service SparkApplicationService {
+  // CreateSparkApplication creates a new Spark application
+  rpc CreateSparkApplication(CreateSparkApplicationRequest) returns (SparkApplication);
+
+  // GetSparkApplication retrieves a Spark application by name
+  rpc GetSparkApplication(GetSparkApplicationRequest) returns (SparkApplication);
+
+  // ListSparkApplications lists all Spark applications in a namespace
+  rpc ListSparkApplications(ListSparkApplicationsRequest) returns (ListSparkApplicationsResponse);
+
+  // DeleteSparkApplication deletes a Spark application
+  rpc DeleteSparkApplication(DeleteSparkApplicationRequest) returns (Empty);
+}
